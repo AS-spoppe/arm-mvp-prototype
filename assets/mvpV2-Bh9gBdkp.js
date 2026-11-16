@@ -1,1 +1,0 @@
-import{S as e,b as t,t as n,x as r}from"./jsx-runtime-681U-WAT.js";import{t as i}from"./MvpApp-BZMfSvkw.js";var a=e(r(),1),o=e(t(),1),s=n();o.createRoot(document.getElementById(`root`)).render((0,s.jsx)(a.StrictMode,{children:(0,s.jsx)(i,{detail:`page`})}));
