@@ -1,17 +1,67 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#00173e" />
-  <title>CenterPoint · ARM cases (v2, case page)</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2300173e'/%3E%3C/svg%3E" />
-  <script type="module" crossorigin src="/arm-mvp-prototype/assets/mvpV2-BNmE1o-8.js"></script>
-  <link rel="modulepreload" crossorigin href="/arm-mvp-prototype/assets/jsx-runtime-681U-WAT.js">
-  <link rel="modulepreload" crossorigin href="/arm-mvp-prototype/assets/MvpApp-CQ5gbysT.js">
-  <link rel="stylesheet" crossorigin href="/arm-mvp-prototype/assets/MvpApp-KUyDyrsW.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>CenterPoint ARM cases (research prototype)</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f6fa; color: #0a1f44; font-family: Roboto, "Helvetica Neue", Arial, sans-serif; }
+  main { width: min(420px, calc(100vw - 32px)); background: #fff; border: 1px solid #d5dbe6; border-radius: 12px; padding: 32px; box-shadow: 0 8px 24px rgba(10, 31, 68, 0.08); }
+  h1 { margin: 0 0 8px; font-size: 22px; line-height: 1.25; }
+  p { margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: #44546f; }
+  label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
+  input { width: 100%; height: 44px; padding: 0 12px; border: 1px solid #8a96ab; border-radius: 8px; font: inherit; font-size: 16px; color: inherit; }
+  input:focus-visible, button:focus-visible { outline: 3px solid #0b6bcb; outline-offset: 2px; }
+  button { width: 100%; height: 44px; margin-top: 16px; border: 0; border-radius: 8px; background: #0b5cad; color: #fff; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+  button:disabled { background: #6b7a94; cursor: progress; }
+  #msg { min-height: 20px; margin: 12px 0 0; font-size: 14px; color: #a1281d; }
+  small { display: block; margin-top: 20px; font-size: 12px; line-height: 1.5; color: #5b6a85; }
+</style>
 </head>
 <body>
-  <div id="root"></div>
+<main>
+  <h1>CenterPoint ARM cases</h1>
+  <p>Research prototype. Enter the password to open it.</p>
+  <form id="gate" autocomplete="off">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password" required autofocus>
+    <button id="go" type="submit">Open prototype</button>
+    <p id="msg" role="alert" aria-live="polite"></p>
+  </form>
+  <small>Sample values are illustrative. This is not production CenterPoint, and a favorable review is not a product decision.</small>
+</main>
+<script>
+(function () {
+  var form = document.getElementById("gate");
+  var pw = document.getElementById("pw");
+  var go = document.getElementById("go");
+  var msg = document.getElementById("msg");
+  async function open(password) {
+    var response = await fetch("assets/prototype-page.enc");
+    if (!response.ok) throw new Error("missing");
+    var bytes = new Uint8Array(await response.arrayBuffer());
+    var material = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+    var key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: bytes.slice(0, 16), iterations: 600000, hash: "SHA-256" }, material, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    var packed;
+    try { packed = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.slice(16, 28) }, key, bytes.slice(28)); }
+    catch (e) { throw new Error("wrong"); }
+    var html = await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+    document.open(); document.write(html); document.close();
+  }
+  form.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    msg.textContent = "";
+    go.disabled = true; go.textContent = "Opening…";
+    try { await open(pw.value); }
+    catch (e) {
+      msg.textContent = e && e.message === "wrong" ? "That password did not work." : "The prototype could not be loaded. Try again later.";
+      go.disabled = false; go.textContent = "Open prototype"; pw.select();
+    }
+  });
+})();
+</script>
 </body>
 </html>
