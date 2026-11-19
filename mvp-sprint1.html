@@ -25,7 +25,7 @@
 <body>
 <main>
   <h1>CenterPoint ARM cases</h1>
-  <p>Research prototype. Enter the password to open it.</p>
+  <p>Research prototype. Enter the password to open it. A correct password opens the other releases too, for 30 minutes.</p>
   <form id="gate" autocomplete="off">
     <label for="pw">Password</label>
     <input id="pw" type="password" autocomplete="current-password" required autofocus>
@@ -40,6 +40,22 @@
   var pw = document.getElementById("pw");
   var go = document.getElementById("go");
   var msg = document.getElementById("msg");
+  var KEY = "arm_mvp_gate";
+  var HALF_HOUR = 30 * 60 * 1000;
+  function savedPassword() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (!saved || !saved.password || !saved.until || saved.until < Date.now()) { localStorage.removeItem(KEY); return ""; }
+      return saved.password;
+    } catch (e) { return ""; }
+  }
+  function remember(password) {
+    try {
+      var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+      var until = saved && saved.until > Date.now() ? saved.until : Date.now() + HALF_HOUR;
+      localStorage.setItem(KEY, JSON.stringify({ password: password, until: until }));
+    } catch (e) { /* a private window can refuse storage; the page still opens */ }
+  }
   async function open(password) {
     var response = await fetch("assets/prototype-sprint1.enc");
     if (!response.ok) throw new Error("missing");
@@ -50,18 +66,25 @@
     try { packed = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.slice(16, 28) }, key, bytes.slice(28)); }
     catch (e) { throw new Error("wrong"); }
     var html = await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+    remember(password);
     document.open(); document.write(html); document.close();
   }
-  form.addEventListener("submit", async function (event) {
-    event.preventDefault();
+  async function tryOpen(password) {
     msg.textContent = "";
     go.disabled = true; go.textContent = "Opening…";
-    try { await open(pw.value); }
+    try { await open(password); }
     catch (e) {
+      if (e && e.message === "wrong") { try { localStorage.removeItem(KEY); } catch (err) { /* ignore */ } }
       msg.textContent = e && e.message === "wrong" ? "That password did not work." : "The prototype could not be loaded. Try again later.";
       go.disabled = false; go.textContent = "Open prototype"; pw.select();
     }
+  }
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    tryOpen(pw.value);
   });
+  var saved = savedPassword();
+  if (saved) tryOpen(saved);
 })();
 </script>
 </body>
